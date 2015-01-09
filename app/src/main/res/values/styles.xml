@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- the theme applied to the application or activity -->
+    <!-- Theme.AppCompat.Light.DarkActionBar -->
+    <style name="AppTheme" parent="Theme.AppCompat">
+
+        <item name="android:icon">@drawable/ic_logo_coffee</item>
+
+    </style>
+
+</resources>

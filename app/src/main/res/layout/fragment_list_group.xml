@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="?android:attr/listPreferredItemHeight"
+    android:padding="10dp">
+
+        <TextView
+            android:id="@+id/groupDate"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:paddingLeft="?android:attr/expandableListPreferredItemPaddingLeft"
+            android:gravity="center"
+            android:text="02-01-2015"
+            android:textSize="@dimen/abc_text_size_body_1_material" />
+
+        <TextView
+            android:id="@+id/groupAmount"
+            android:layout_width="64dp"
+            android:layout_height="match_parent"
+            android:layout_alignParentRight="true"
+            android:gravity="center"
+            android:background="@drawable/rectangle_blue"
+            android:text="100"
+            android:textSize="@dimen/abc_text_size_body_1_material"
+            android:textColor="#FFFFFF"
+            android:textStyle="bold" />
+
+</RelativeLayout>
