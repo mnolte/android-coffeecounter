@@ -31,10 +31,10 @@ proguard/
 *.ipr
 
 # Gradle files
-/build
-/gradle
-/.gradle
-/build.gradle
+build
+gradle
+.gradle
+build.gradle
 gradle.properties
 gradlew
 gradlew.bat
