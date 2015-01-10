@@ -171,6 +171,8 @@ public class MyContentProvider extends ContentProvider
             // Notify potential listeners
             cursor.setNotificationUri(getContext().getContentResolver(), uri);
 
+            Log.d(DEBUG_TAG, "Query on uri: " + uri);
+
             return cursor;
         }
         catch(Exception e)
@@ -218,12 +220,13 @@ public class MyContentProvider extends ContentProvider
         // Verify query was successful
         if (id > 0)
         {
-            // Backup database (for debugging)
+            /* Backup database (for debugging)
             try {
                 dbHelper.writeToSD();
             } catch(Exception e) {
                 Log.e(DEBUG_TAG, e.getMessage());
             }
+            */
 
             // Notify content change
             getContext().getContentResolver().notifyChange(uri, null);
