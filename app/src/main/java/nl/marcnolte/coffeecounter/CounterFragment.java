@@ -230,24 +230,40 @@ public class CounterFragment extends Fragment implements
         switch(loaderID)
         {
             case URL_LOADER_TODAY:
+                // Initialize parameters
+                int amount = 0;
                 // Set cursor to first row
                 if (data.moveToFirst())
                 {
-                    // Update text views
-                    String amount = data.getString(data.getColumnIndexOrThrow("amount"));
-                    tvCounterAmount.setText(amount);
+                    // Fetch data
+                    amount = data.getInt(data.getColumnIndexOrThrow("amount"));
                 }
+                // Make sure value is set
+                amount = amount > 0 ? amount : 0;
+                // Update text views
+                tvCounterAmount.setText(String.valueOf(amount));
                 break;
 
             case URL_LOADER_STATS:
+                // Initialize parameters
+                int minimum = 0, maximum = 0;
+                double average = 0;
                 // Set cursor to first row
                 if (data.moveToFirst())
                 {
-                    // Update text views
-                    tvMinAmount.setText(data.getString(data.getColumnIndexOrThrow("minimum")));
-                    tvMaxAmount.setText(data.getString(data.getColumnIndexOrThrow("maximum")));
-                    tvAverageAmount.setText(NumberHelper.getDecimal(data.getDouble(data.getColumnIndexOrThrow("average")), 0, 1));
+                    // Fetch data
+                    minimum = data.getInt(data.getColumnIndexOrThrow("minimum"));
+                    maximum = data.getInt(data.getColumnIndexOrThrow("maximum"));
+                    average = data.getDouble(data.getColumnIndexOrThrow("average"));
                 }
+                // Make sure value is not empty
+                minimum = minimum > 0 ? minimum : 0;
+                maximum = maximum > 0 ? maximum : 0;
+                average = average > 0 ? average : 0;
+                // Update text views
+                tvMinAmount.setText(String.valueOf(minimum));
+                tvMaxAmount.setText(String.valueOf(maximum));
+                tvAverageAmount.setText(NumberHelper.getDecimal(average, 0, 1));
                 break;
         }
     }
