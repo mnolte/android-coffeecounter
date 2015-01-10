@@ -25,20 +25,20 @@ proguard/
 .settings
 
 # Android Studio
+local.properties
 .idea
 *.iws
 *.iml
 *.ipr
 
 # Gradle files
-/build
-/gradle
-/.gradle
-/build.gradle
+build
+gradle
+.gradle
+build.gradle
 gradle.properties
 gradlew
 gradlew.bat
-local.properties
 settings.gradle
 
 # OSX files
