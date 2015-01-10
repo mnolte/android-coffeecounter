@@ -1,12 +1,18 @@
 package nl.marcnolte.coffeecounter;
 
+import android.content.BroadcastReceiver;
 import android.content.ContentValues;
-import android.database.ContentObserver;
+import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.database.Cursor;
 import android.net.Uri;
+import android.os.AsyncTask;
 import android.os.Bundle;
-import android.os.Handler;
 import android.support.v4.app.Fragment;
+import android.support.v4.app.LoaderManager;
+import android.support.v4.content.CursorLoader;
+import android.support.v4.content.Loader;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -20,7 +26,9 @@ import nl.marcnolte.coffeecounter.database.DatabaseContract;
 import nl.marcnolte.coffeecounter.libraries.NumberHelper;
 import nl.marcnolte.coffeecounter.libraries.TimeHelper;
 
-public class CounterFragment extends Fragment implements View.OnClickListener
+public class CounterFragment extends Fragment implements
+    View.OnClickListener,
+    LoaderManager.LoaderCallbacks<Cursor>
 {
     /**
      * Debug Tag
@@ -28,13 +36,28 @@ public class CounterFragment extends Fragment implements View.OnClickListener
     private final String DEBUG_TAG = getClass().getSimpleName();
 
     /**
+     * Loaders
+     */
+    private static final int URL_LOADER_TODAY = 0;
+    private static final int URL_LOADER_STATS = 1;
+
+    /**
+     * Broadcast receivers
+     */
+    private final TimeChangeReceiver mTimeChangeReceiver = new TimeChangeReceiver();
+
+    /**
      * Layout elements
      */
-    private TextView   tvCounterAmount;
-    private TextView   tvMinAmount;
-    private TextView   tvMaxAmount;
-    private TextView   tvAverageAmount;
-    private MyObserver uriObserver;
+    private TextView tvCounterAmount;
+    private TextView tvMinAmount;
+    private TextView tvMaxAmount;
+    private TextView tvAverageAmount;
+
+    /**
+     * Timekeeping
+     */
+    String today = null;
 
     /**
      * Create a new instance of this fragment.
@@ -65,8 +88,8 @@ public class CounterFragment extends Fragment implements View.OnClickListener
 
         // Initialize fields
         tvCounterAmount = (TextView) rootView.findViewById(R.id.fragment_counter_amount);
-        tvMinAmount     = (TextView) rootView.findViewById(R.id.fragment_counter_details_min_amount);
-        tvMaxAmount     = (TextView) rootView.findViewById(R.id.fragment_counter_details_max_amount);
+        tvMinAmount = (TextView) rootView.findViewById(R.id.fragment_counter_details_min_amount);
+        tvMaxAmount = (TextView) rootView.findViewById(R.id.fragment_counter_details_max_amount);
         tvAverageAmount = (TextView) rootView.findViewById(R.id.fragment_counter_details_average_amount);
 
         // Initialize buttons
@@ -81,8 +104,9 @@ public class CounterFragment extends Fragment implements View.OnClickListener
     {
         super.onActivityCreated(savedInstanceState);
 
-        setCounter();
-        setStatistics();
+        // Initialize loaders
+        initializeLoader(URL_LOADER_TODAY);
+        initializeLoader(URL_LOADER_STATS);
     }
 
     @Override
@@ -90,9 +114,23 @@ public class CounterFragment extends Fragment implements View.OnClickListener
     {
         super.onResume();
 
-        // Register counter observer
-        uriObserver = new MyObserver(new Handler());
-        getActivity().getContentResolver().registerContentObserver(buildUri(null), true, uriObserver);
+        Log.d(DEBUG_TAG, "onResume called");
+
+        // Make sure current day is visible
+        if (today == null || !TimeHelper.isToday(today))
+        {
+            initializeLoader(URL_LOADER_TODAY);
+        }
+
+        // Create intent filter
+        IntentFilter mIntendFilter = new IntentFilter();
+        mIntendFilter.addAction(Intent.ACTION_TIME_TICK);
+        // @TODO Reset loaders when user changes time or timezone while running the app
+        //mIntendFilter.addAction(Intent.ACTION_TIME_CHANGED);
+        //mIntendFilter.addAction(Intent.ACTION_TIMEZONE_CHANGED);
+
+        // Register broadcast receivers
+        getActivity().registerReceiver(mTimeChangeReceiver, mIntendFilter);
     }
 
     @Override
@@ -100,8 +138,10 @@ public class CounterFragment extends Fragment implements View.OnClickListener
     {
         super.onPause();
 
-        // Unregister observer
-        getActivity().getContentResolver().unregisterContentObserver(uriObserver);
+        Log.d(DEBUG_TAG, "onPause called");
+
+        // Unregister broadcast receivers
+        getActivity().unregisterReceiver(mTimeChangeReceiver);
     }
 
     /**
@@ -115,108 +155,171 @@ public class CounterFragment extends Fragment implements View.OnClickListener
         switch (v.getId())
         {
             case R.id.fragment_counter_button_count:
-                incrementCounter();
+                new IncrementCounterTask(){
+                    @Override
+                    protected void onPostExecute(Void result)
+                    {
+                        // Show toast feedback
+                        Toast.makeText(getActivity(), R.string.toast_counter_incremented, Toast.LENGTH_SHORT).show();
+                    }
+                }.execute();
                 break;
         }
     }
 
     /**
-     * Build uri
+     * Instantiate and return a new Loader for the given ID.
+     *
+     * @param loaderID  The ID whose loader is to be created.
+     * @param args      Any arguments supplied by the caller.
+     *
+     * @return Return a new Loader instance that is ready to start loading.
      */
-    public static Uri buildUri(String appendToPath)
+    @Override
+    public Loader<Cursor> onCreateLoader(int loaderID, Bundle args)
     {
+        // Prepare uri
         Uri.Builder uriBuilder = new Uri.Builder();
         uriBuilder.scheme("content");
         uriBuilder.authority(MyContentProvider.AUTHORITY);
         uriBuilder.path(MyContentProvider.BASE_PATH + "/" + DatabaseContract.Entries.TABLE_NAME);
-        if (appendToPath != null)
-        {
-            uriBuilder.appendPath(appendToPath);
-        }
 
-        return uriBuilder.build();
+        // Handle loader depending on loaderID
+        switch(loaderID)
+        {
+            case URL_LOADER_TODAY:
+            {
+                // Update timekeeper
+                today = TimeHelper.getDate("local");
+                // Prep query
+                Uri    uri             = uriBuilder.build();
+                String projection[]    = { "COUNT(*) AS amount" };
+                String selection       = "DATETIME(" + DatabaseContract.Entries.COLUMN_NAME_DATETIME + ", '+" + TimeHelper.getOffset() + " SECONDS') BETWEEN ? AND ?";
+                String selectionArgs[] = { TimeHelper.getDatetime("sod", "local"), TimeHelper.getDatetime("eod", "local") };
+                // Return a new CursorLoader
+                return new CursorLoader(getActivity(), uri, projection, selection, selectionArgs, null);
+            }
+
+            case URL_LOADER_STATS:
+            {
+                // Prep query
+                Uri    uri             = uriBuilder.appendPath("avg").build();
+                String projection[]    = { "MIN(amount) AS minimum", "MAX(amount) AS maximum", "AVG(amount) AS average" };
+                // Return a new CursorLoader
+                return new CursorLoader(getActivity(), uri, projection, null, null, null);
+            }
+
+            default:
+                return null;
+        }
     }
 
     /**
-     * Increment counter
+     * Called when a previously created loader has finished its load.
+     *
+     * @param loader The Loader that has finished.
+     * @param data   The data generated by the Loader.
      */
-    public void incrementCounter()
+    @Override
+    public void onLoadFinished(Loader<Cursor> loader, Cursor data)
     {
-        // Set values
-        ContentValues values = new ContentValues();
-        values.clear();
-        values.put(DatabaseContract.Entries.COLUMN_NAME_DATETIME, TimeHelper.getDatetime("now", "UTC"));
+        // Get loader ID
+        int loaderID = loader.getId();
 
-        // Run query
-        getActivity().getContentResolver().insert(buildUri(null), values);
+        // Handle loader depending on loaderID
+        switch(loaderID)
+        {
+            case URL_LOADER_TODAY:
+                // Set cursor to first row
+                if (data.moveToFirst())
+                {
+                    // Update text views
+                    String amount = data.getString(data.getColumnIndexOrThrow("amount"));
+                    tvCounterAmount.setText(amount);
+                }
+                break;
 
-        // Show toast feedback
-        Toast.makeText(getActivity(), R.string.toast_counter_incremented, Toast.LENGTH_SHORT).show();
+            case URL_LOADER_STATS:
+                // Set cursor to first row
+                if (data.moveToFirst())
+                {
+                    // Update text views
+                    tvMinAmount.setText(data.getString(data.getColumnIndexOrThrow("minimum")));
+                    tvMaxAmount.setText(data.getString(data.getColumnIndexOrThrow("maximum")));
+                    tvAverageAmount.setText(NumberHelper.getDecimal(data.getDouble(data.getColumnIndexOrThrow("average")), 0, 1));
+                }
+                break;
+        }
     }
 
     /**
-     * Set counter
+     * Called when a previously created loader is being reset, and thus
+     * making its data unavailable. The application should at this point
+     * remove any references it has to the Loader's data.
+     *
+     * @param loader The Loader that is being reset.
      */
-    public void setCounter()
+    @Override
+    public void onLoaderReset(Loader<Cursor> loader)
     {
-        // Prep query
-        String projection[]    = { "COUNT(*) AS amount" };
-        String selection       = "DATETIME(" + DatabaseContract.Entries.COLUMN_NAME_DATETIME  + ", '+" + TimeHelper.getOffset() + " SECONDS') BETWEEN ? AND ?";
-        String selectionArgs[] = { TimeHelper.getDatetime("sod", "local"), TimeHelper.getDatetime("end", "local") };
-        // Run query
-        Cursor cursor = getActivity().getContentResolver().query(buildUri(null), projection, selection, selectionArgs, null);
-        if (cursor.moveToFirst())
-        {
-            // Set counter value
-            tvCounterAmount.setText(cursor.getString(cursor.getColumnIndexOrThrow("amount")));
-        }
-        cursor.close();
+        // Cursor is already being closed by loader, so just remove references to cursor data here
     }
 
     /**
-     * Set statistics
+     * Initialize loader
+     *
+     * @param loaderID  The ID whose loader is to be initialized.
      */
-    public void setStatistics()
+    public void initializeLoader(int loaderID)
     {
-        // Prep query
-        String projection[] = { "MIN(amount) AS minimum", "MAX(amount) AS maximum", "AVG(amount) AS average"  };
-        // Run query
-        Cursor cursor = getActivity().getContentResolver().query(buildUri("avg"), projection, null, null, null);
-        if (cursor.moveToFirst())
+        Loader loader = getLoaderManager().getLoader(loaderID);
+        if (loader != null && !loader.isReset())
         {
-            // Set results
-            // @TODO Add total to statistics
-            tvMinAmount.setText(cursor.getString(cursor.getColumnIndexOrThrow("minimum")));
-            tvMaxAmount.setText(cursor.getString(cursor.getColumnIndexOrThrow("maximum")));
-            tvAverageAmount.setText(NumberHelper.getDecimal(cursor.getDouble(cursor.getColumnIndexOrThrow("average")), 0, 1));
+            getLoaderManager().restartLoader(loaderID, null, this);
         }
-        cursor.close();
+        else
+        {
+            getLoaderManager().initLoader(loaderID, null, this);
+        }
     }
 
-    private class MyObserver extends ContentObserver
+    private class IncrementCounterTask extends AsyncTask<Void, Void, Void>
     {
-        /**
-         * Creates a new content observer instance.
-         *
-         * @param handler The handler to run onChange on, or null if none.
-         */
-        public MyObserver(Handler handler)
-        {
-            super(handler);
-        }
+        private final String DEBUG_TAG = getClass().getSimpleName();
 
         @Override
-        public void onChange(boolean selfChange)
+        protected Void doInBackground(Void... params)
         {
-            onChange(selfChange, null);
+            Uri.Builder uriBuilder = new Uri.Builder();
+            uriBuilder.scheme("content");
+            uriBuilder.authority(MyContentProvider.AUTHORITY);
+            uriBuilder.path(MyContentProvider.BASE_PATH + "/" + DatabaseContract.Entries.TABLE_NAME);
+
+            ContentValues values = new ContentValues();
+            values.clear();
+            values.put(DatabaseContract.Entries.COLUMN_NAME_DATETIME, TimeHelper.getDatetime("now", "UTC"));
+
+            getActivity().getContentResolver().insert(uriBuilder.build(), values);
+
+            return null;
         }
+    }
+
+    public class TimeChangeReceiver extends BroadcastReceiver
+    {
+        private final String DEBUG_TAG = getClass().getSimpleName();
 
         @Override
-        public void onChange(boolean selfChange, Uri uri)
+        public void onReceive(final Context context, Intent intent)
         {
-            setCounter();
-            setStatistics();
+            Log.d(DEBUG_TAG, "Time changed");
+
+            // Make sure current day is visible
+            if (today == null || !TimeHelper.isToday(today))
+            {
+                Log.d("MyDateChangeReceiver", "Date changed");
+                initializeLoader(URL_LOADER_TODAY);
+            }
         }
     }
 }
-
