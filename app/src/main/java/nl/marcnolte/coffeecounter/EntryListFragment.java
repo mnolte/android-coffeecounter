@@ -77,23 +77,16 @@ public class EntryListFragment extends Fragment implements LoaderManager.LoaderC
         listAdapter = new EntryListAdapter(this, getActivity());
         listView.setAdapter(listAdapter);
 
-        // Start loading data
-        // @TODO Implement pause and destroy for screen rotation
-        Loader loader = getLoaderManager().getLoader(URL_LOADER_GROUPS);
-        if (loader != null && !loader.isReset())
-        {
-            getLoaderManager().restartLoader(URL_LOADER_GROUPS, null, this);
-        }
-        else
-        {
-            getLoaderManager().initLoader(URL_LOADER_GROUPS, null, this);
-        }
+        // Initialize loader
+        initializeLoader(URL_LOADER_GROUPS);
     }
 
     @Override
     public void onResume()
     {
         super.onResume();
+
+        // @TODO Reset loaders when user changes time or timezone while running the app
 
         // Register context menu
         registerForContextMenu(listView);
@@ -239,8 +232,6 @@ public class EntryListFragment extends Fragment implements LoaderManager.LoaderC
         int group = ExpandableListView.getPackedPositionGroup(info.packedPosition);
         int child = ExpandableListView.getPackedPositionChild(info.packedPosition);
 
-        Log.d("Contextmenu: ", "type: " + type + ", group: " + group + ", child: " + child);
-
         // Only create a context menu for child items
         if (type == ExpandableListView.PACKED_POSITION_TYPE_CHILD)
         {
@@ -262,6 +253,24 @@ public class EntryListFragment extends Fragment implements LoaderManager.LoaderC
         }
 
         return true;
+    }
+
+    /**
+     * Initialize loader
+     *
+     * @param loaderID  The ID whose loader is to be initialized.
+     */
+    public void initializeLoader(int loaderID)
+    {
+        Loader loader = getLoaderManager().getLoader(loaderID);
+        if (loader != null && !loader.isReset())
+        {
+            getLoaderManager().restartLoader(loaderID, null, this);
+        }
+        else
+        {
+            getLoaderManager().initLoader(loaderID, null, this);
+        }
     }
 
     /**
