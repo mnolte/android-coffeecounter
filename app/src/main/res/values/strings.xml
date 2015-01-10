@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <string name="app_name">Counter</string>
+    <string name="app_name">Coffee Counter</string>
 
     <string name="action_list">List</string>
     <string name="action_settings">Settings</string>
@@ -11,6 +11,8 @@
     <string name="fragment_counters_details_min_title">Minimum</string>
     <string name="fragment_counters_details_max_title">Maximum</string>
     <string name="fragment_counters_details_average_title">Average</string>
+
+    <string name="fragment_list_empty">No results</string>
 
     <string name="toast_counter_incremented">Counter updated</string>
     <string name="toast_entry_deleted">Entry removed</string>
