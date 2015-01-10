@@ -15,10 +15,9 @@ import java.nio.channels.FileChannel;
 
 public class DatabaseHelper extends SQLiteOpenHelper
 {
-    private final String DEBUG_TAG = getClass().getSimpleName().toString();
+    private final String DEBUG_TAG = getClass().getSimpleName();
 
     private Context mContext;
-    private String  DB_PATH;
 
     public DatabaseHelper(Context context)
     {
@@ -58,12 +57,14 @@ public class DatabaseHelper extends SQLiteOpenHelper
 
     public void writeToSD() throws IOException
     {
+        String  dbPath;
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1)
         {
-            DB_PATH = mContext.getFilesDir().getAbsolutePath().replace("files", "databases") + File.separator;
+            dbPath = mContext.getFilesDir().getAbsolutePath().replace("files", "databases") + File.separator;
         }
         else {
-            DB_PATH = mContext.getFilesDir().getPath() + mContext.getPackageName() + "/databases/";
+            dbPath = mContext.getFilesDir().getPath() + mContext.getPackageName() + "/databases/";
         }
 
         File sd = Environment.getExternalStorageDirectory();
@@ -72,7 +73,7 @@ public class DatabaseHelper extends SQLiteOpenHelper
         {
             String currentDBPath = DatabaseContract.DATABASE_NAME;
             String backupDBPath  = DatabaseContract.DATABASE_NAME + "_backup.db";
-            File currentDB = new File(DB_PATH, currentDBPath);
+            File currentDB = new File(dbPath, currentDBPath);
             File backupDB  = new File(sd, backupDBPath);
 
             if (currentDB.exists())
