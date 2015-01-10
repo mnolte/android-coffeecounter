@@ -44,6 +44,8 @@ public class ConfirmDeleteDialog extends DialogFragment
     @Override
     public Dialog onCreateDialog(Bundle savedInstanceState)
     {
+        super.onCreateDialog(savedInstanceState);
+
         final int entryID = getArguments().getInt("entryID");
 
         // Use the Builder class for convenient dialog construction
