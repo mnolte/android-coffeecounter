@@ -3,6 +3,7 @@ package nl.marcnolte.coffeecounter.libraries;
 import android.util.Log;
 
 import java.text.DateFormat;
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
@@ -33,10 +34,10 @@ final public class TimeHelper
             Date             mDate   = mFormat.parse(dateStr);
             return dateFormat.format(mDate);
         }
-        catch(Exception e)
+        catch(ParseException e)
         {
-            Log.e(DEBUG_TAG, e.getMessage());
-            return dateStr;
+            e.printStackTrace();
+            return null;
         }
     }
 
@@ -48,21 +49,46 @@ final public class TimeHelper
             Date             mTime   = mFormat.parse(timeStr);
             return dateFormat.format(mTime);
         }
-        catch(Exception e)
+        catch(ParseException e)
         {
-            Log.e(DEBUG_TAG, e.getMessage());
-            return timeStr;
+            e.printStackTrace();
+            return null;
         }
+    }
+
+    public static String getDate(String timezone)
+    {
+        // Set local (device) time
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+        Calendar mLocalTime  = new GregorianCalendar();
+
+        // Set timezone
+        TimeZone mTimezone;
+        switch(timezone)
+        {
+            // Local (device) timezone
+            case "device":
+            case "local":
+                mTimezone = TimeZone.getDefault();
+                break;
+
+            // Set from parameter
+            default:
+                mTimezone = TimeZone.getTimeZone(timezone);
+        }
+        sdf.setTimeZone(mTimezone);
+
+        // Return date in requested timezone
+        return sdf.format(mLocalTime.getTimeInMillis());
     }
 
     public static String getDatetime(String type, String timezone)
     {
-        // Prep parameters
+        // Set local (device) time
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         Calendar mLocalTime  = new GregorianCalendar();
-        TimeZone mTimezone;
 
-        // Set time for date
+        // Set date
         switch(type)
         {
             // Start of the day
@@ -82,19 +108,48 @@ final public class TimeHelper
                 break;
 
             // Now
+            case "now":
             default:
-                // Do nothing
+                // Do nothing for current time
         }
 
         // Set timezone
-        if (timezone == "local") {
-            mTimezone = TimeZone.getDefault();
-        } else {
-            mTimezone = TimeZone.getTimeZone("UTC");
+        TimeZone mTimezone;
+        switch(timezone)
+        {
+            // Local (device) timezone
+            case "device":
+            case "local":
+                mTimezone = TimeZone.getDefault();
+                break;
+
+            // Set from parameter
+            default:
+                mTimezone = TimeZone.getTimeZone(timezone);
         }
         sdf.setTimeZone(mTimezone);
 
-        // Return formatted datetime in UTC
+        // Return datetime in requested timezone
         return sdf.format(mLocalTime.getTimeInMillis());
+    }
+
+    public static boolean isToday(String dateStr)
+    {
+        try
+        {
+            SimpleDateFormat sdf   = new SimpleDateFormat("yyyy-MM-dd");
+            Date             mDate = sdf.parse(dateStr);
+            return (new Date().after(mDate));
+        }
+        catch(ParseException e)
+        {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    public static String removeTime(String datetimeStr)
+    {
+        return datetimeStr.split(" ")[0];
     }
 }
