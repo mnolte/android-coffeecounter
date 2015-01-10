@@ -14,4 +14,12 @@
         android:divider="#A4C739"
         android:dividerHeight="0.5dp" />
 
+    <TextView
+        android:id="@+id/emptyView"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:gravity="center"
+        android:text="@string/fragment_list_empty"
+        android:textSize="@dimen/abc_text_size_headline_material" />
+
 </RelativeLayout>

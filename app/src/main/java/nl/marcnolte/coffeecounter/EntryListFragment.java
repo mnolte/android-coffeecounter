@@ -15,6 +15,7 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ExpandableListView;
+import android.widget.TextView;
 
 import nl.marcnolte.coffeecounter.contentprovider.MyContentProvider;
 import nl.marcnolte.coffeecounter.database.DatabaseContract;
@@ -64,6 +65,10 @@ public class EntryListFragment extends Fragment implements LoaderManager.LoaderC
 
         // Initialize list view
         listView = (ExpandableListView) rootView.findViewById(R.id.expandableList);
+
+        // Set empty view
+        TextView emptyView = (TextView) rootView.findViewById(R.id.emptyView);
+        listView.setEmptyView(emptyView);
 
         return rootView;
     }
